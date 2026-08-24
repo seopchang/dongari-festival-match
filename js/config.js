@@ -37,12 +37,12 @@ export const CONFIG = {
    * "SDK 설정 및 구성"에서 config 객체를 그대로 복사해 붙여넣는다.
    */
   firebase: {
-    apiKey: 'YOUR_API_KEY',
-    authDomain: 'YOUR_PROJECT.firebaseapp.com',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT.firebasestorage.app',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    appId: 'YOUR_APP_ID',
+    apiKey: 'AIzaSyB5Uuxdg0BpAqlS_aXCPAL2AVT0-IGBA6Q',
+    authDomain: 'duthegee-eaf1b.firebaseapp.com',
+    projectId: 'duthegee-eaf1b',
+    storageBucket: 'duthegee-eaf1b.firebasestorage.app',
+    messagingSenderId: '1006174431620',
+    appId: '1:1006174431620:web:6eae8e685fe042847c95d1',
   },
 
   /* -------------------------------------------------------------------
