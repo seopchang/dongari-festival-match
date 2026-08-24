@@ -1,0 +1,320 @@
+/* =====================================================================
+ *  운영진용 관리자 화면
+ * =====================================================================
+ *  참가자 앱과 달리 데스크톱/태블릿에서 표를 보는 용도라 폭을 넓게 쓴다.
+ * =====================================================================
+ */
+
+:root {
+  --pink-600: #ff3e75;
+  --pink-500: #ff5c8a;
+  --pink-100: #ffe7ee;
+  --pink-50: #fff3f6;
+  --pink-border: #ffd9e3;
+  --cream: #fff7f4;
+  --violet-900: #2b1b4a;
+  --violet-600: #5b3e8c;
+  --violet-100: #efe7f7;
+  --mute-500: #8e7ca6;
+  --mute-400: #a594b8;
+  --mute-300: #c4b4d2;
+  --line-1: #e2d3ec;
+  --line-2: #eadff2;
+  --font-kr: 'Pretendard', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-num: 'Outfit', var(--font-kr);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--violet-900);
+  font-family: var(--font-kr);
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* ---------------------------------------------------------------------
+ * 로그인
+ * ------------------------------------------------------------------- */
+
+.login {
+  max-width: 380px;
+  margin: 12vh auto;
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  border-radius: 24px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 14px 30px rgba(255, 92, 138, 0.14);
+}
+
+.login h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.login p {
+  font-size: 14px;
+  color: var(--mute-500);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.input {
+  height: 52px;
+  width: 100%;
+  border-radius: 14px;
+  border: 1.5px solid var(--pink-border);
+  background: #fff;
+  padding: 0 16px;
+  font-size: 15px;
+  outline: none;
+  color: var(--violet-900);
+}
+
+.input:focus { border-color: var(--pink-500); }
+
+.btn {
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: var(--pink-600);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn:disabled { background: var(--line-1); color: var(--mute-300); cursor: not-allowed; }
+
+.btn--sm {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.btn--ghost {
+  background: #fff;
+  border: 1.5px solid var(--line-1);
+  color: var(--violet-600);
+}
+
+.error {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pink-600);
+  background: var(--pink-50);
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.error:empty { display: none; }
+
+/* ---------------------------------------------------------------------
+ * 헤더
+ * ------------------------------------------------------------------- */
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.head__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.head__user {
+  font-size: 13px;
+  color: var(--mute-500);
+}
+
+/* ---------------------------------------------------------------------
+ * 통계 타일
+ * ------------------------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.stat {
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat__key {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mute-500);
+}
+
+.stat__val {
+  font-family: var(--font-num);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--pink-600);
+  line-height: 1;
+}
+
+.stat__sub {
+  font-size: 12px;
+  color: var(--mute-400);
+}
+
+/* ---------------------------------------------------------------------
+ * 탭
+ * ------------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-1);
+  background: #fff;
+  color: var(--mute-500);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--violet-900);
+  border-color: var(--violet-900);
+  color: #fff;
+  font-weight: 800;
+}
+
+.panel { display: none; }
+.panel.is-active { display: block; }
+
+/* ---------------------------------------------------------------------
+ * 표
+ * ------------------------------------------------------------------- */
+
+.table-wrap {
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  border-radius: 18px;
+  /* 좁은 화면에서 표만 가로로 스크롤한다. 페이지 자체는 안 밀린다. */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+th, td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+th {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mute-500);
+  background: var(--pink-50);
+  position: sticky;
+  top: 0;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--pink-50); }
+
+td.num { font-family: var(--font-num); font-weight: 700; }
+
+.tag {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: var(--violet-100);
+  color: var(--violet-600);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.tag--pink { background: var(--pink-100); color: var(--pink-600); }
+
+.msg-cell {
+  max-width: 280px;
+  white-space: normal;
+  color: var(--mute-500);
+  line-height: 1.5;
+}
+
+.empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--mute-400);
+  font-size: 15px;
+}
+
+/* MBTI 분포 막대 */
+.dist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.dist__item {
+  background: #fff;
+  border: 1.5px solid var(--line-2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dist__bar {
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--pink-500), #ff8a5c);
+  margin-top: 6px;
+}

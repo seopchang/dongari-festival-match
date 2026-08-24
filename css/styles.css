@@ -1,0 +1,870 @@
+/* =====================================================================
+ *  동아리 축제 소개팅 매칭 부스 — 참가자용 스타일
+ * =====================================================================
+ *  디자인 토큰은 핸드오프 문서(README.md)를 따른다.
+ *  기준 뷰포트 390 × 844 (iPhone 14). 모바일 전용으로 짠 뒤 넓은 화면에서는
+ *  가운데 폭을 제한한다.
+ * =====================================================================
+ */
+
+:root {
+  /* 핑크 계열 */
+  --pink-600: #ff3e75;
+  --pink-500: #ff5c8a;
+  --pink-100: #ffe7ee;
+  --pink-50: #fff3f6;
+  --pink-border: #ffd9e3;
+
+  /* 코랄 */
+  --coral-400: #ff7e6b;
+  --coral-300: #ffb39b;
+
+  /* 바탕 */
+  --cream: #fff7f4;
+  --waiting-bg: #fbf6fa;
+
+  /* 바이올렛 / 텍스트 */
+  --violet-900: #2b1b4a;
+  --violet-600: #5b3e8c;
+  --violet-100: #efe7f7;
+
+  /* 보조 텍스트 */
+  --mute-500: #8e7ca6;
+  --mute-400: #a594b8;
+  --mute-300: #c4b4d2;
+  --mute-200: #b9a9c9;
+
+  /* 선 */
+  --line-1: #e2d3ec;
+  --line-2: #eadff2;
+  --line-3: #f2e4ea;
+
+  /* 그림자 */
+  --sh-cta: 0 12px 26px rgba(255, 62, 117, 0.32);
+  --sh-card: 0 14px 30px rgba(255, 92, 138, 0.14);
+  --sh-option: 0 8px 18px rgba(255, 92, 138, 0.08);
+
+  --font-kr: 'Pretendard', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-num: 'Outfit', var(--font-kr);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--violet-900);
+  font-family: var(--font-kr);
+  -webkit-font-smoothing: antialiased;
+  /* iOS 사파리에서 입력 포커스 시 화면이 확대되는 걸 막는다 */
+  -webkit-text-size-adjust: 100%;
+}
+
+input,
+textarea,
+button {
+  font-family: inherit;
+}
+
+@keyframes beat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.14); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.09); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 애니메이션을 줄여달라고 설정한 사용자를 존중한다 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 골격
+ * ------------------------------------------------------------------- */
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  /* 동적 뷰포트 단위 — 모바일 주소창이 접힐 때 높이가 튀는 걸 막는다 */
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.screen {
+  display: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: max(20px, env(safe-area-inset-top)) 26px
+    max(34px, env(safe-area-inset-bottom));
+}
+
+.screen.is-active {
+  display: flex;
+  animation: fadeUp 0.25s ease-out;
+}
+
+.screen__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.screen__foot {
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------------
+ * 공통 요소
+ * ------------------------------------------------------------------- */
+
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.subtitle {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--mute-500);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.caption {
+  font-size: 13px;
+  color: var(--mute-400);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.btn {
+  width: 100%;
+  height: 64px;
+  border: none;
+  border-radius: 22px;
+  background: var(--pink-600);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 800;
+  box-shadow: var(--sh-cta);
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  background: var(--line-1);
+  color: var(--mute-200);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  height: 56px;
+  background: transparent;
+  border: 1.5px solid var(--line-1);
+  color: var(--violet-600);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+.btn--dark {
+  background: var(--violet-900);
+  box-shadow: none;
+  font-size: 18px;
+}
+
+/* 뒤로가기 */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  min-height: 38px;
+}
+
+.back {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  background: var(--pink-100);
+  color: var(--pink-600);
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 1 — 시작
+ * ------------------------------------------------------------------- */
+
+#screen-start {
+  background: linear-gradient(180deg, var(--pink-500) 0%, var(--coral-400) 100%);
+  color: #fff;
+  justify-content: center;
+  gap: 26px;
+  padding-left: 34px;
+  padding-right: 34px;
+}
+
+.pill {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hero {
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.hero-sub {
+  font-size: 16px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.heart {
+  font-size: 64px;
+  line-height: 1;
+  animation: beat 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 8px 18px rgba(43, 27, 74, 0.25));
+}
+
+#screen-start .btn {
+  background: #fff;
+  color: var(--pink-600);
+  box-shadow: 0 12px 26px rgba(43, 27, 74, 0.2);
+}
+
+#screen-start .caption {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 2 — 기본 정보
+ * ------------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.field__label {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field__hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mute-400);
+}
+
+.input {
+  height: 58px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  padding: 0 18px;
+  font-size: 16px;
+  color: var(--violet-900);
+  outline: none;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--pink-500);
+}
+
+.input::placeholder {
+  color: var(--mute-300);
+}
+
+/* 인스타 ID 입력 — 앞에 @ 를 고정으로 붙인다 */
+.input-prefix {
+  position: relative;
+}
+
+.input-prefix > .input {
+  padding-left: 36px;
+}
+
+.input-prefix::before {
+  content: '@';
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pink-500);
+  font-weight: 700;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.choices {
+  display: grid;
+  gap: 10px;
+}
+
+.choices--2 { grid-template-columns: repeat(2, 1fr); }
+.choices--3 { grid-template-columns: repeat(3, 1fr); }
+
+.choice {
+  height: 58px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  color: var(--mute-500);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.choices--2 .choice {
+  height: 62px;
+  font-size: 17px;
+}
+
+/* 단수 선택 (성별, 내 학년) */
+.choice[aria-pressed='true'] {
+  background: var(--violet-900);
+  border-color: var(--violet-900);
+  color: #fff;
+  font-weight: 800;
+}
+
+.choices--gender .choice[aria-pressed='true'] {
+  background: var(--pink-500);
+  border-color: var(--pink-500);
+  box-shadow: 0 10px 20px rgba(255, 92, 138, 0.28);
+}
+
+/* 중복 선택 (매칭 희망 학년) */
+.choices--multi .choice[aria-pressed='true'] {
+  background: var(--pink-100);
+  border-color: var(--pink-500);
+  color: var(--pink-600);
+  font-weight: 800;
+}
+
+.choices--multi .choice[aria-pressed='true']::before {
+  content: '✓ ';
+}
+
+.error {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pink-600);
+  background: var(--pink-50);
+  border-radius: 12px;
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.error:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 3~6 — 질문
+ * ------------------------------------------------------------------- */
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.progress__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.progress__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mute-500);
+}
+
+.progress__count {
+  font-family: var(--font-num);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--pink-600);
+}
+
+.progress__count span {
+  color: var(--line-1);
+}
+
+.progress__track {
+  height: 8px;
+  border-radius: 99px;
+  background: var(--line-3);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--pink-500), #ff8a5c);
+  transition: width 0.3s ease-out;
+}
+
+.axis-badge {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--violet-100);
+  color: var(--violet-600);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.question {
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.44;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+  margin: 0;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.option {
+  min-height: 88px;
+  width: 100%;
+  border-radius: 24px;
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  box-shadow: var(--sh-option);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.option:active {
+  transform: scale(0.99);
+}
+
+.option[aria-pressed='true'] {
+  border-color: var(--pink-500);
+  background: var(--pink-50);
+}
+
+.option__key {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-num);
+  font-weight: 800;
+}
+
+.option__key--a {
+  background: var(--pink-100);
+  color: var(--pink-600);
+}
+
+.option__key--b {
+  background: var(--violet-100);
+  color: var(--violet-600);
+}
+
+.option__label {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 7 — 한마디
+ * ------------------------------------------------------------------- */
+
+.emoji-lg {
+  font-size: 52px;
+  line-height: 1;
+}
+
+.textarea-box {
+  border-radius: 24px;
+  background: #fff;
+  border: 1.5px solid var(--pink-500);
+  padding: 20px;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 24px rgba(255, 92, 138, 0.12);
+}
+
+.textarea-box textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--violet-900);
+  background: transparent;
+}
+
+.textarea-box textarea::placeholder {
+  color: var(--mute-300);
+}
+
+.counter {
+  align-self: flex-end;
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mute-300);
+}
+
+.counter.is-full {
+  color: var(--pink-600);
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 8 — 분석 중
+ * ------------------------------------------------------------------- */
+
+#screen-analyzing {
+  background: radial-gradient(
+    120% 80% at 50% 0%,
+    var(--coral-400) 0%,
+    var(--pink-600) 55%,
+    var(--violet-900) 100%
+  );
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 30px;
+}
+
+.loader {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+}
+
+.loader__ring--inner {
+  inset: 22px;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.4);
+  animation: spin 6s linear infinite;
+}
+
+.loader__heart {
+  font-size: 76px;
+  animation: beat 1.3s ease-in-out infinite;
+}
+
+#screen-analyzing .title {
+  color: #fff;
+  font-size: 27px;
+}
+
+/* ---------------------------------------------------------------------
+ * 화면 9 / 10 — 결과
+ * ------------------------------------------------------------------- */
+
+.result-head {
+  background: linear-gradient(160deg, var(--pink-500), var(--pink-600));
+  margin: calc(-1 * max(20px, env(safe-area-inset-top))) -26px 0;
+  padding: max(28px, calc(env(safe-area-inset-top) + 20px)) 26px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #fff;
+}
+
+.result-head__title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.mbti-badge {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--pink-600);
+  font-family: var(--font-num);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.mbti-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mbti-row__desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.5;
+}
+
+.card {
+  border-radius: 26px;
+  background: #fff;
+  border: 1.5px solid var(--pink-border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: var(--sh-card);
+}
+
+.card__eyebrow {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--pink-600);
+  letter-spacing: 0.04em;
+}
+
+.partner-name {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* 인스타 ID — 크게 + 복사 버튼 */
+.handle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--pink-50);
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+
+.handle__id {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-num);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--pink-600);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  flex: none;
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 14px;
+  background: var(--pink-600);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copy.is-done {
+  background: var(--violet-900);
+}
+
+.quote {
+  border-radius: 18px;
+  background: var(--violet-100);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quote__label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--violet-600);
+  letter-spacing: 0.04em;
+}
+
+.quote__body {
+  font-size: 16px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.divider {
+  height: 1px;
+  background: var(--line-2);
+  margin: 4px 0;
+}
+
+/* 하리보 안내 */
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--pink-50);
+  border: 1.5px solid var(--pink-border);
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.notice__icon {
+  font-size: 26px;
+  line-height: 1.2;
+  flex: none;
+}
+
+.notice__text {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* 대기 화면 */
+#screen-waiting {
+  background: var(--waiting-bg);
+}
+
+.moon {
+  font-size: 62px;
+  animation: float 3.6s ease-in-out infinite;
+}
+
+.summary {
+  border-radius: 24px;
+  background: #fff;
+  border: 1.5px solid var(--line-2);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.summary__key {
+  font-size: 14px;
+  color: var(--mute-500);
+}
+
+.summary__val {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 스크롤이 생기는 화면 */
+.screen--scroll {
+  justify-content: flex-start;
+}
+
+.screen--scroll .screen__body {
+  gap: 18px;
+}

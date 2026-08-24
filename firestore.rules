@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// =====================================================================
+//  Firestore 보안 규칙
+// =====================================================================
+//  Firebase 콘솔 → Firestore Database → 규칙 탭에 붙여넣고 "게시".
+//
+//  기본 원칙
+//    - 참가자는 "새로 만들기"만 된다. 수정·삭제는 아무도 못 한다.
+//      한번 제출한 응답을 나중에 조작할 수 없게 하기 위해서다.
+//    - 매칭 기록도 만들기만 된다. 읽기는 로그인한 운영진만.
+//    - 참가자 목록 읽기는 열어둔다. 브라우저에서 매칭을 계산해야 해서다.
+//
+//  ⚠️ 열어둔 읽기 권한에 대해
+//  프로젝트 ID를 아는 사람은 participants 컬렉션을 통째로 읽을 수 있다.
+//  즉 참가자들의 인스타 ID가 노출될 수 있다. 무료(Spark) 요금제에서
+//  클라이언트 SDK만으로는 이걸 막을 방법이 없다 — 매칭을 계산하려면
+//  다른 참가자 문서를 읽어야 하고, Firestore 규칙은 문서 단위라서
+//  "특정 필드만 숨기기"가 안 되기 때문이다.
+//
+//  막아야 한다면 매칭을 Cloud Functions로 옮기고 아래 participants의
+//  read를 false로 바꾸면 된다. Functions는 Blaze(종량제) 요금제가
+//  필요하다. 자세한 건 SETUP.md 참고.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------------
+    // 참가자
+    // -----------------------------------------------------------------
+    match /participants/{id} {
+
+      // 매칭 계산과 중복 확인에 필요하다
+      allow read: if true;
+
+      // 만들기만 허용하고, 모양이 맞는지 검사한다.
+      // 검사를 안 걸면 아무나 임의의 문서를 잔뜩 밀어넣을 수 있다.
+      allow create: if isValidParticipant(request.resource.data);
+
+      // 제출한 응답은 아무도 못 고치고 못 지운다
+      allow update, delete: if false;
+    }
+
+    // -----------------------------------------------------------------
+    // 매칭 기록
+    // -----------------------------------------------------------------
+    match /matches/{id} {
+
+      // 운영진(로그인한 사용자)만 볼 수 있다
+      allow read: if request.auth != null;
+
+      allow create: if isValidMatch(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // 위에서 명시하지 않은 경로는 전부 막는다
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// 검증 함수
+// ---------------------------------------------------------------------
+
+function isValidParticipant(d) {
+  return d.keys().hasOnly([
+           'createdAt', 'nickname', 'instagram', 'gender', 'grade',
+           'preferredGrades', 'questionIds', 'answers', 'mbti', 'message'
+         ])
+      && d.keys().hasAll([
+           'createdAt', 'nickname', 'instagram', 'gender', 'grade',
+           'preferredGrades', 'mbti'
+         ])
+      && d.createdAt == request.time
+      && d.nickname is string
+      && d.nickname.size() > 0 && d.nickname.size() <= 20
+      && d.instagram is string
+      && d.instagram.size() > 0 && d.instagram.size() <= 40
+      // 저장 전에 소문자로 정규화되어 있어야 한다
+      && d.instagram == d.instagram.lower()
+      && d.gender in ['male', 'female']
+      && d.grade is int && d.grade >= 1 && d.grade <= 3
+      && d.preferredGrades is list
+      && d.preferredGrades.size() > 0 && d.preferredGrades.size() <= 3
+      && d.mbti is string && d.mbti.size() == 4
+      && (!('message' in d.keys()) || (d.message is string && d.message.size() <= 100))
+      && (!('questionIds' in d.keys()) || d.questionIds is list)
+      && (!('answers' in d.keys()) || d.answers is map);
+}
+
+function isValidMatch(d) {
+  return d.keys().hasOnly(['matchedAt', 'mbti', 'a', 'b'])
+      && d.matchedAt == request.time
+      && d.mbti is string && d.mbti.size() == 4
+      && d.a is map && d.b is map;
+}

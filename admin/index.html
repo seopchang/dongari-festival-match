@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>운영진 대시보드 · 소개팅 매칭 부스</title>
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<!-- =================================================================
+     로그인
+     ================================================================= -->
+<form class="login" id="login" hidden>
+  <h1>운영진 로그인</h1>
+  <p>Firebase 인증에 등록된 운영진 계정으로 로그인하세요.</p>
+  <input class="input" id="email" type="email" placeholder="이메일"
+         autocomplete="username" required>
+  <input class="input" id="password" type="password" placeholder="비밀번호"
+         autocomplete="current-password" required>
+  <button class="btn" id="btn-login" type="submit">로그인</button>
+  <p class="error" id="login-error" role="alert"></p>
+</form>
+
+<!-- =================================================================
+     대시보드
+     ================================================================= -->
+<div class="wrap" id="dash" hidden>
+
+  <div class="head">
+    <h1>소개팅 매칭 부스 · 운영진</h1>
+    <div class="head__actions">
+      <span class="head__user" id="who"></span>
+      <button class="btn btn--sm btn--ghost" id="btn-refresh">새로고침</button>
+      <button class="btn btn--sm btn--ghost" id="btn-csv">CSV 내려받기</button>
+      <button class="btn btn--sm btn--ghost" id="btn-logout">로그아웃</button>
+    </div>
+  </div>
+
+  <p class="error" id="dash-error" role="alert"></p>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat__key">총 참가자</span>
+      <span class="stat__val" id="st-total">–</span>
+    </div>
+    <div class="stat">
+      <span class="stat__key">남 / 여</span>
+      <span class="stat__val" id="st-gender">–</span>
+    </div>
+    <div class="stat">
+      <span class="stat__key">성사된 매칭</span>
+      <span class="stat__val" id="st-matches">–</span>
+    </div>
+    <div class="stat">
+      <span class="stat__key">대기 중</span>
+      <span class="stat__val" id="st-waiting">–</span>
+      <span class="stat__sub">아직 매칭 기록이 없는 참가자</span>
+    </div>
+    <div class="stat">
+      <span class="stat__key">가장 많은 유형</span>
+      <span class="stat__val" id="st-top-mbti">–</span>
+      <span class="stat__sub" id="st-top-mbti-sub"></span>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-panel="panel-participants" aria-selected="true">참가자</button>
+    <button class="tab" role="tab" data-panel="panel-matches" aria-selected="false">매칭 기록</button>
+    <button class="tab" role="tab" data-panel="panel-dist" aria-selected="false">MBTI 분포</button>
+  </div>
+
+  <!-- 참가자 -->
+  <section class="panel is-active" id="panel-participants">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>참여 시각</th>
+            <th>닉네임</th>
+            <th>인스타</th>
+            <th>성별</th>
+            <th>학년</th>
+            <th>희망 학년</th>
+            <th>MBTI</th>
+            <th>한마디</th>
+          </tr>
+        </thead>
+        <tbody id="tb-participants"></tbody>
+      </table>
+      <div class="empty" id="empty-participants" hidden>아직 참가자가 없어요.</div>
+    </div>
+  </section>
+
+  <!-- 매칭 기록 -->
+  <section class="panel" id="panel-matches">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>매칭 시각</th>
+            <th>MBTI</th>
+            <th>A 닉네임</th>
+            <th>A 인스타</th>
+            <th>B 닉네임</th>
+            <th>B 인스타</th>
+          </tr>
+        </thead>
+        <tbody id="tb-matches"></tbody>
+      </table>
+      <div class="empty" id="empty-matches" hidden>아직 성사된 매칭이 없어요.</div>
+    </div>
+  </section>
+
+  <!-- MBTI 분포 -->
+  <section class="panel" id="panel-dist">
+    <div class="dist" id="dist"></div>
+    <div class="empty" id="empty-dist" hidden>집계할 데이터가 없어요.</div>
+  </section>
+
+</div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>

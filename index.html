@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FF3E75">
+<title>두근두근 소개팅 매칭 · 동아리 축제</title>
+
+<meta name="description" content="질문 4개만 답하면 MBTI 성향을 분석해 이 부스 안에서 잘 맞는 사람을 찾아드립니다.">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================================================================
+       화면 1 · 시작
+       ================================================================ -->
+  <section class="screen" id="screen-start">
+    <span class="pill">2026 동아리 축제 특별 부스</span>
+    <h1 class="hero">두근두근<br>소개팅 매칭</h1>
+    <p class="hero-sub">
+      질문 4개만 답하면 돼.<br>
+      MBTI 성향을 분석해서 지금 이 부스에<br>
+      나랑 잘 맞는 사람을 찾아줄게요.
+    </p>
+    <div class="heart" aria-hidden="true">💗</div>
+
+    <div class="screen__foot">
+      <button class="btn" id="btn-start">시작하기</button>
+      <p class="caption">소요시간 약 1분 · 인스타 ID는 매칭된 상대에게만 공개돼요</p>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       화면 2 · 기본 정보 입력
+       ================================================================ -->
+  <section class="screen screen--scroll" id="screen-profile">
+    <div class="topbar">
+      <button class="back" data-back aria-label="이전 화면으로">←</button>
+      <span class="topbar__title">기본 정보</span>
+    </div>
+
+    <div class="screen__body">
+      <div class="field">
+        <label class="field__label" for="in-nickname">닉네임</label>
+        <input class="input" id="in-nickname" type="text" maxlength="12"
+               placeholder="도서관고양이" autocomplete="off" enterkeyhint="next">
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="in-instagram">
+          인스타 ID
+          <span class="field__hint">@ 없이 입력해도 돼요</span>
+        </label>
+        <div class="input-prefix">
+          <input class="input" id="in-instagram" type="text"
+                 placeholder="cat_in_lib" autocomplete="off"
+                 autocapitalize="none" spellcheck="false" enterkeyhint="done">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label" id="lbl-gender">성별</span>
+        <div class="choices choices--2 choices--gender" id="choices-gender"
+             role="group" aria-labelledby="lbl-gender">
+          <button class="choice" type="button" data-value="male" aria-pressed="false">남</button>
+          <button class="choice" type="button" data-value="female" aria-pressed="false">여</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label" id="lbl-grade">
+          내 학년 <span class="field__hint">하나만 선택</span>
+        </span>
+        <div class="choices choices--3" id="choices-grade"
+             role="group" aria-labelledby="lbl-grade"></div>
+      </div>
+
+      <div class="field">
+        <span class="field__label" id="lbl-pref">
+          매칭 희망 학년 <span class="field__hint">여러 개 선택 가능</span>
+        </span>
+        <div class="choices choices--3 choices--multi" id="choices-pref"
+             role="group" aria-labelledby="lbl-pref"></div>
+      </div>
+
+      <p class="error" id="profile-error" role="alert"></p>
+    </div>
+
+    <div class="screen__foot">
+      <button class="btn" id="btn-profile-next" disabled>다음</button>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       화면 3~6 · MBTI 질문
+       한 화면을 4번 다시 그린다. 진행 상태는 app.js가 들고 있다.
+       ================================================================ -->
+  <section class="screen" id="screen-question">
+    <div class="topbar">
+      <button class="back" data-back aria-label="이전 화면으로">←</button>
+    </div>
+
+    <div class="progress">
+      <div class="progress__head">
+        <span class="progress__label">시나리오 질문</span>
+        <span class="progress__count" id="q-count">1<span>/4</span></span>
+      </div>
+      <div class="progress__track">
+        <div class="progress__fill" id="q-fill" style="width:25%"></div>
+      </div>
+    </div>
+
+    <div class="screen__body">
+      <span class="axis-badge" id="q-axis">E / I</span>
+      <h2 class="question" id="q-text"></h2>
+    </div>
+
+    <div class="options screen__foot">
+      <button class="option" type="button" id="q-opt-a" aria-pressed="false">
+        <span class="option__key option__key--a" aria-hidden="true">A</span>
+        <span class="option__label" id="q-opt-a-label"></span>
+      </button>
+      <button class="option" type="button" id="q-opt-b" aria-pressed="false">
+        <span class="option__key option__key--b" aria-hidden="true">B</span>
+        <span class="option__label" id="q-opt-b-label"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       화면 7 · 한마디 입력
+       ================================================================ -->
+  <section class="screen" id="screen-message">
+    <div class="topbar">
+      <button class="back" data-back aria-label="이전 화면으로">←</button>
+    </div>
+
+    <div class="screen__body">
+      <div class="emoji-lg" aria-hidden="true">💌</div>
+      <h2 class="title">매칭될 상대에게 전할 한마디를 남겨봐! 💌</h2>
+      <p class="subtitle">첫인상이 여기서 정해져요. 부담 없이 한 줄이면 충분!</p>
+
+      <div class="textarea-box">
+        <textarea id="in-message" maxlength="50"
+                  placeholder="중앙도서관 4층에서 자주 보이는 사람. 커피 한 잔 사줄게요 ☕"
+                  aria-label="매칭될 상대에게 전할 한마디"></textarea>
+        <span class="counter" id="msg-counter">0 / 50</span>
+      </div>
+
+      <p class="error" id="message-error" role="alert"></p>
+    </div>
+
+    <div class="screen__foot">
+      <button class="btn" id="btn-submit">제출하기</button>
+      <p class="caption">연락처·계정 정보는 한마디에 적지 말아주세요</p>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       화면 8 · 분석 중
+       ================================================================ -->
+  <section class="screen" id="screen-analyzing">
+    <div class="loader">
+      <div class="loader__ring" aria-hidden="true"></div>
+      <div class="loader__ring loader__ring--inner" aria-hidden="true"></div>
+      <div class="loader__heart" aria-hidden="true">💗</div>
+    </div>
+    <h2 class="title" role="status">AI가 당신의 MBTI를<br>분석하고 있어요...</h2>
+  </section>
+
+  <!-- ================================================================
+       화면 9 · 매칭 성공
+       ================================================================ -->
+  <section class="screen screen--scroll" id="screen-result">
+    <div class="result-head">
+      <h2 class="result-head__title">
+        <span aria-hidden="true">💘</span>운명의 상대를<br>찾았어요!
+      </h2>
+      <div class="mbti-row">
+        <span class="mbti-badge" id="my-mbti">----</span>
+        <span class="mbti-row__desc">내 성향이에요</span>
+      </div>
+    </div>
+
+    <div class="screen__body" style="padding-top:24px">
+      <div class="card">
+        <span class="card__eyebrow">운명의 상대</span>
+
+        <div class="partner-name" id="partner-name"></div>
+
+        <div class="handle">
+          <span class="handle__id" id="partner-handle"></span>
+          <button class="copy" id="btn-copy" type="button">복사</button>
+        </div>
+
+        <div class="quote">
+          <span class="quote__label">상대가 남긴 한마디</span>
+          <span class="quote__body" id="partner-message"></span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="notice">
+        <span class="notice__icon" aria-hidden="true">🐻</span>
+        <span class="notice__text">
+          맞팔 인증하면 하리보 증정!<br>운영진에게 이 화면을 보여주세요
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       화면 10 · 매칭 대기
+       ================================================================ -->
+  <section class="screen screen--scroll" id="screen-waiting">
+    <div class="screen__body" style="justify-content:center">
+      <div class="moon" aria-hidden="true">🌙</div>
+      <h2 class="title">아직 운명의 상대가<br>나타나지 않았어요...</h2>
+      <p class="subtitle">
+        누군가 매칭되면 인스타로 연락이 갈 수도 있으니 기대해봐요 👀
+      </p>
+
+      <div class="summary">
+        <div class="summary__row">
+          <span class="summary__key">내 성향</span>
+          <span class="mbti-badge" id="my-mbti-waiting"
+                style="background:var(--violet-100);color:var(--violet-600);font-size:15px">----</span>
+        </div>
+        <div class="divider" style="margin:0"></div>
+        <div class="summary__row">
+          <span class="summary__key">매칭 희망 학년</span>
+          <span class="summary__val" id="waiting-prefs"></span>
+        </div>
+      </div>
+
+      <div class="notice">
+        <span class="notice__icon" aria-hidden="true">🐻</span>
+        <span class="notice__text">
+          하리보는 매칭이 성사된 뒤<br>운영진을 통해 받을 수 있어요
+        </span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
