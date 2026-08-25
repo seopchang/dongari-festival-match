@@ -49,6 +49,34 @@
 
     <div class="screen__body">
       <div class="field">
+        <span class="field__label" id="lbl-photo">
+          프로필 <span class="field__hint">선택 · 안 넣어도 돼요</span>
+        </span>
+        <div class="photo-row">
+          <button class="photo-preview" type="button" id="btn-photo-open"
+                  aria-label="프로필 고르기">
+            <span class="photo-preview__empty" id="photo-empty" aria-hidden="true">＋</span>
+            <span class="photo-preview__art" id="photo-art" aria-hidden="true" hidden></span>
+            <img id="photo-img" alt="" hidden>
+          </button>
+          <div class="photo-side">
+            <p class="photo-current" id="photo-current" aria-live="polite">
+              눌러서 사진이나 동물상을 고르세요
+            </p>
+            <button class="photo-btn photo-btn--del" type="button" id="btn-photo-del" hidden>
+              빼기
+            </button>
+          </div>
+        </div>
+
+        <!-- 입력창을 둘로 나눠 둔다. capture 가 붙은 쪽은 폰에서 카메라가
+             바로 열리고, 없는 쪽은 앨범이 열린다. 하나로 합쳐서 capture 를
+             껐다 켰다 하면 브라우저가 이전 상태를 물고 있는 경우가 있다. -->
+        <input type="file" id="in-photo-cam" accept="image/*" capture="user" hidden>
+        <input type="file" id="in-photo-lib" accept="image/*" hidden>
+      </div>
+
+      <div class="field">
         <label class="field__label" for="in-nickname">닉네임</label>
         <input class="input" id="in-nickname" type="text" maxlength="12"
                placeholder="도서관고양이" autocomplete="off" enterkeyhint="next">
@@ -85,7 +113,7 @@
 
       <div class="field">
         <span class="field__label" id="lbl-pref">
-          매칭 희망 학년 <span class="field__hint">여러 개 선택 가능</span>
+          매칭 희망 학년 <span class="field__hint">여러 개 고르면 매칭 확률 ↑</span>
         </span>
         <div class="choices choices--3 choices--multi" id="choices-pref"
              role="group" aria-labelledby="lbl-pref"></div>
@@ -98,6 +126,40 @@
       <button class="btn" id="btn-profile-next" disabled>다음</button>
     </div>
   </section>
+
+  <!-- ================================================================
+       프로필 고르기 창 (화면 2에서 ＋ 를 누르면 열린다)
+       ================================================================ -->
+  <div class="sheet" id="photo-sheet" hidden>
+    <div class="sheet__backdrop" data-sheet-close></div>
+
+    <div class="sheet__panel" role="dialog" aria-modal="true"
+         aria-labelledby="sheet-title">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="sheet-title">프로필 고르기</h2>
+        <button class="sheet__close" type="button" data-sheet-close
+                aria-label="닫기">✕</button>
+      </div>
+
+      <div class="sheet__actions">
+        <button class="photo-btn" type="button" id="btn-photo-cam">
+          <span aria-hidden="true">📷</span> 사진 찍기
+        </button>
+        <button class="photo-btn photo-btn--sub" type="button" id="btn-photo-lib">
+          앨범에서 고르기
+        </button>
+      </div>
+
+      <p class="photo-help" id="photo-help">
+        얼굴이 부담되면 아무 사진이나 괜찮아요
+      </p>
+
+      <div class="sheet__or"><span>또는 동물상으로</span></div>
+
+      <div class="animals" id="choices-animal" role="group"
+           aria-label="동물상 고르기"></div>
+    </div>
+  </div>
 
   <!-- ================================================================
        화면 3~6 · MBTI 질문
@@ -197,7 +259,16 @@
           <span class="score" id="match-score">궁합 --%</span>
         </div>
 
-        <div class="partner-name" id="partner-name"></div>
+        <div class="partner-row">
+          <div class="avatar" id="partner-avatar">
+            <span class="avatar__art" id="partner-art" aria-hidden="true"></span>
+            <img id="partner-photo" alt="" hidden>
+          </div>
+          <div class="partner-who">
+            <div class="partner-name" id="partner-name"></div>
+            <span class="partner-tag" id="partner-tag" hidden></span>
+          </div>
+        </div>
 
         <div class="handle">
           <span class="handle__id" id="partner-handle"></span>

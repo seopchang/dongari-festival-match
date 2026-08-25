@@ -21,11 +21,14 @@ import {
 import {
   listParticipants,
   listMatches,
+  listPhotos,
   deleteParticipant,
   deleteMatch,
   deleteAllParticipants,
   deleteAllMatches,
+  deleteAllPhotos,
 } from '../js/db.js';
+import { animalSvg, animalLabel } from '../js/animals.js';
 
 const auth = getAuth();
 const $ = (id) => document.getElementById(id);
@@ -74,6 +77,8 @@ onAuthStateChanged(auth, (user) => {
 
 let participants = [];
 let matches = [];
+/** { 참가자문서id: dataUrl } */
+let photos = {};
 
 $('btn-refresh').addEventListener('click', refresh);
 
@@ -85,7 +90,11 @@ async function refresh() {
   $('dash-ok').textContent = '';
 
   try {
-    [participants, matches] = await Promise.all([listParticipants(), listMatches()]);
+    [participants, matches, photos] = await Promise.all([
+      listParticipants(),
+      listMatches(),
+      listPhotos(),
+    ]);
     renderStats();
     renderParticipants();
     renderMatches();
@@ -130,6 +139,45 @@ function tagCell(row, text, variant) {
   span.className = 'tag' + (variant ? ' tag--' + variant : '');
   span.textContent = text ?? '';
   td.appendChild(span);
+  row.appendChild(td);
+}
+
+/**
+ * 사진 썸네일 칸.
+ * 사진이 없으면 참가자가 고른 동물상 그림을 대신 넣는다.
+ * @param {HTMLElement} row
+ * @param {string|null|undefined} dataUrl
+ * @param {string} [animal] 동물상 id
+ */
+function photoCell(row, dataUrl, animal) {
+  const td = document.createElement('td');
+
+  if (!dataUrl) {
+    const box = document.createElement('span');
+    box.className = 'thumb thumb--art';
+    box.title = animalLabel(animal) || '사진·동물상 없음';
+    box.innerHTML = animalSvg(animal);
+    td.appendChild(box);
+    row.appendChild(td);
+    return;
+  }
+
+  if (dataUrl) {
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = dataUrl;
+    img.alt = '';
+    // 누르면 원래 크기로 새 탭에서 열린다 (얼굴 확인용)
+    img.title = '클릭하면 크게 보기';
+    img.addEventListener('click', () => {
+      const w = window.open();
+      if (w) w.document.write(`<img src="${dataUrl}" style="max-width:100%">`);
+    });
+    td.appendChild(img);
+  } else {
+    td.textContent = '–';
+  }
+
   row.appendChild(td);
 }
 
@@ -240,6 +288,7 @@ function renderParticipants() {
   participants.forEach((p) => {
     const tr = document.createElement('tr');
     cell(tr, fmtTime(p.createdAt), 'num');
+    photoCell(tr, photos[p.id], p.animal);
     cell(tr, p.nickname);
     cell(tr, '@' + (p.instagram || ''));
     cell(tr, GENDER_KR[p.gender] || p.gender || '');
@@ -268,13 +317,30 @@ function renderMatches() {
   tb.innerHTML = '';
   $('empty-matches').hidden = matches.length > 0;
 
+  // 매칭 기록에는 참가자 문서 id가 없다 (닉네임·인스타만 복사해 둔다).
+  // 사진은 문서 id로 저장되므로 인스타 ID를 다리 삼아 잇는다.
+  const idByInsta = {};
+  participants.forEach((p) => {
+    if (p.instagram) idByInsta[p.instagram] = p.id;
+  });
+  const photoOf = (insta) => (insta ? photos[idByInsta[insta]] : null);
+
+  // 동물상도 참가자 문서에 있으므로 같은 다리를 쓴다
+  const byInsta = {};
+  participants.forEach((p) => {
+    if (p.instagram) byInsta[p.instagram] = p;
+  });
+  const animalOf = (insta) => (insta && byInsta[insta] ? byInsta[insta].animal : null);
+
   matches.forEach((m) => {
     const tr = document.createElement('tr');
     cell(tr, fmtTime(m.matchedAt), 'num');
     tagCell(tr, m.mbti || m.a?.mbti || '');
     cell(tr, typeof m.compatibility === 'number' ? `${m.compatibility}%` : '–', 'num');
+    photoCell(tr, photoOf(m.a?.instagram), animalOf(m.a?.instagram));
     cell(tr, m.a?.nickname || '');
     cell(tr, '@' + (m.a?.instagram || ''));
+    photoCell(tr, photoOf(m.b?.instagram), animalOf(m.b?.instagram));
     cell(tr, m.b?.nickname || '');
     cell(tr, '@' + (m.b?.instagram || ''));
     deleteCell(
@@ -413,8 +479,9 @@ $('btn-wipe-all').addEventListener('click', () => {
     // 매칭을 먼저 지운다. 참가자만 남는 것보다, 참가자 삭제가 중간에
     // 실패했을 때 매칭 기록만 붕 떠 있는 상태가 더 헷갈린다.
     const m = await deleteAllMatches();
+    const f = await deleteAllPhotos();
     const p = await deleteAllParticipants();
-    return `참가자 ${p}명, 매칭 기록 ${m}건을 삭제했습니다.`;
+    return `참가자 ${p}명, 매칭 기록 ${m}건, 사진 ${f}장을 삭제했습니다.`;
   });
 });
 

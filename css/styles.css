@@ -52,6 +52,12 @@
   box-sizing: border-box;
 }
 
+/* HTML의 hidden 속성은 UA 스타일시트의 display:none 인데, 아래에서
+ * .avatar img { display:block } 같은 규칙을 주면 우선순위에서 밀려버린다.
+ * 그러면 src 없는 빈 이미지가 그대로 그려져서 아바타에 이상한 줄이 생긴다.
+ * hidden 이 항상 이기게 못 박아 둔다. */
+[hidden] { display: none !important; }
+
 html,
 body {
   margin: 0;
@@ -417,6 +423,316 @@ button {
 
 .choices--multi .choice[aria-pressed='true']::before {
   content: '✓ ';
+}
+
+/* 프로필 고르기 (화면 2) */
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.photo-preview {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--pink-50);
+  border: 1.5px dashed var(--pink-border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.photo-preview:active {
+  transform: scale(0.97);
+}
+
+.photo-preview__art {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.photo-preview__art svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.photo-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.photo-current {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--mute-500);
+}
+
+/* 사진이 들어오면 점선을 실선으로 바꿔 "채워졌다"를 보여준다 */
+.photo-preview.is-set {
+  border-style: solid;
+  border-color: var(--pink-500);
+}
+
+.photo-preview__empty {
+  font-size: 30px;
+  font-weight: 300;
+  color: var(--pink-500);
+  line-height: 1;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.photo-btn {
+  height: 42px;
+  padding: 0 13px;
+  border-radius: 14px;
+  border: 1.5px solid var(--pink-500);
+  background: var(--pink-50);
+  color: var(--pink-600);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.photo-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+/* 앨범 · 빼기는 보조 동작이라 한 단계 눌러 둔다 */
+.photo-btn--sub,
+.photo-btn--del {
+  background: #fff;
+  border-color: var(--line-1);
+  color: var(--mute-500);
+}
+
+.photo-help {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mute-400);
+}
+
+.photo-help.is-error {
+  color: var(--pink-600);
+  font-weight: 700;
+}
+
+/* 프로필 고르기 창 — 아래에서 올라오는 시트 */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(43, 27, 74, 0.45);
+}
+
+.sheet__panel {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--cream);
+  border-radius: 26px 26px 0 0;
+  padding: 22px 22px max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: sheetUp 0.22s ease-out;
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.sheet__close {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  background: var(--pink-100);
+  color: var(--pink-600);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sheet__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sheet__actions .photo-btn {
+  flex: 1;
+}
+
+/* 가운데 글자 양옆으로 선을 긋는다 */
+.sheet__or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--mute-400);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sheet__or::before,
+.sheet__or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
+
+/* 동물상 고르기 */
+.animals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.animal {
+  border: 1.5px solid var(--pink-border);
+  background: #fff;
+  border-radius: 16px;
+  padding: 8px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.animal svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.animal__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mute-500);
+  white-space: nowrap;
+}
+
+.animal[aria-pressed='true'] {
+  background: var(--pink-100);
+  border-color: var(--pink-500);
+  box-shadow: 0 6px 14px rgba(255, 92, 138, 0.18);
+}
+
+.animal[aria-pressed='true'] .animal__label {
+  color: var(--pink-600);
+  font-weight: 800;
+}
+
+/* 결과 화면 상대 아바타 */
+.partner-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.partner-who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.partner-tag {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--violet-100);
+  color: var(--violet-600);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--pink-50);
+  border: 1.5px solid var(--pink-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar__art {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.avatar__art svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .error {

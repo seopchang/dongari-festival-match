@@ -74,6 +74,31 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
+    // -----------------------------------------------------------------
+    // 참가자 사진
+    // -----------------------------------------------------------------
+    //  문서 id = 참가자 문서 id. 사진은 선택 항목이라 없을 수 있다.
+    //
+    //  참가자 문서와 따로 둔 이유는 용량이다. 같이 넣으면 매칭할 때
+    //  이성 참가자 전원의 사진까지 내려받게 된다 (100명이면 수 MB).
+    //
+    //  ⚠️ 읽기가 열려 있다 = 주소를 아는 사람은 참가자 사진을 전부 긁어갈
+    //  수 있다. 참가자 화면에서 상대 사진을 보여줘야 해서 어쩔 수 없다.
+    //  운영진 판단으로 감수하기로 했다 (3시간짜리 부스 + 행사 후 전량 삭제).
+    //  행사가 끝나면 반드시 photos 컬렉션을 지울 것.
+    // -----------------------------------------------------------------
+    match /photos/{id} {
+
+      allow read: if true;
+
+      allow create: if isValidPhoto(request.resource.data);
+
+      // 남의 사진을 바꿔치기하지 못하게 막는다
+      allow update: if false;
+
+      allow delete: if isStaff();
+    }
+
     // 위에서 명시하지 않은 경로는 전부 막는다
     match /{document=**} {
       allow read, write: if false;
@@ -111,7 +136,8 @@ function isStaff() {
 function isValidParticipant(d) {
   return d.keys().hasOnly([
            'createdAt', 'nickname', 'instagram', 'gender', 'grade',
-           'preferredGrades', 'questionIds', 'answers', 'mbti', 'message'
+           'preferredGrades', 'questionIds', 'answers', 'mbti', 'message',
+           'animal'
          ])
       && d.keys().hasAll([
            'createdAt', 'nickname', 'instagram', 'gender', 'grade',
@@ -130,8 +156,20 @@ function isValidParticipant(d) {
       && d.preferredGrades.size() > 0 && d.preferredGrades.size() <= 3
       && d.mbti is string && d.mbti.size() == 4
       && (!('message' in d.keys()) || (d.message is string && d.message.size() <= 100))
+      // 사진 대신 쓰는 동물상 id ('dog', 'cat' …). 길이만 대충 본다.
+      && (!('animal' in d.keys()) || (d.animal is string && d.animal.size() <= 20))
       && (!('questionIds' in d.keys()) || d.questionIds is list)
       && (!('answers' in d.keys()) || d.answers is map);
+}
+
+function isValidPhoto(d) {
+  return d.keys().hasOnly(['data', 'createdAt'])
+      && d.createdAt == request.time
+      && d.data is string
+      // JPEG data URL 만 받는다. 아무 문자열이나 밀어넣지 못하게.
+      && d.data.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+      // 문서 한도가 1MiB다. 여유를 두고 자른다.
+      && d.data.size() <= 800000;
 }
 
 function isValidMatch(d) {

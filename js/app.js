@@ -22,7 +22,11 @@ import {
   saveParticipant,
   findMatch,
   recordMatch,
+  savePhoto,
+  getPhoto,
 } from './db.js';
+import { compressPhoto } from './photo.js';
+import { ANIMALS, animalSvg, animalLabel, isAnimalId } from './animals.js';
 
 /* ---------------------------------------------------------------------
  * 저장소 — 새로고침을 견디게 한다
@@ -32,6 +36,10 @@ const KEY = {
   questions: CONFIG.STORAGE_PREFIX + 'questionIds',
   draft: CONFIG.STORAGE_PREFIX + 'draft',
   outcome: CONFIG.STORAGE_PREFIX + 'outcome',
+  // 사진은 draft와 따로 둔다. draft는 글자를 칠 때마다 저장되는데,
+  // 거기에 50KB짜리 이미지를 끼워 넣으면 타이핑할 때마다 그만큼을
+  // 다시 쓰게 된다.
+  photo: CONFIG.STORAGE_PREFIX + 'photo',
 };
 
 /**
@@ -87,6 +95,12 @@ const state = {
   gender: null,
   grade: null,
   preferredGrades: [],
+
+  /** 압축된 사진 data URL. 선택 항목이라 없을 수 있다. */
+  photo: null,
+
+  /** 사진 대신 쓸 동물상 id. 안 고르면 닉네임에서 정해준다. */
+  animal: null,
 
   /** [{axis, question}] — 세션당 한 번만 뽑는다 */
   questionSet: null,
@@ -184,6 +198,193 @@ function buildGradeButtons(container, values) {
 
 buildGradeButtons($('choices-grade'), CONFIG.GRADES);
 buildGradeButtons($('choices-pref'), CONFIG.GRADES);
+
+/* ---------------------------------------------------------------------
+ * 프로필 (사진 또는 동물상) — 전부 선택 항목
+ * ---------------------------------------------------------------------
+ * 화면 2에는 동그라미 하나만 둔다. 누르면 시트가 열리고 거기서 사진·동물상·
+ * 안 고르기를 정한다. 선택지를 화면에 다 펼쳐두면 기본 정보 화면이 너무
+ * 복잡해진다.
+ *
+ * 사진 입력창을 둘로 나눈 이유: capture 가 붙은 쪽은 폰에서 카메라가 바로
+ * 열리고, 없는 쪽은 앨범이 열린다. 하나로 두면 폰이 선택창을 한 번 더 띄운다.
+ *
+ * ⚠️ PC에서는 두 버튼 다 파일 탐색기가 열린다. capture 는 모바일 전용이라
+ * 노트북 웹캠은 이 방식으로 안 켜진다. 카메라 확인은 폰으로 해야 한다.
+ * ------------------------------------------------------------------- */
+
+const elPhotoCam = $('in-photo-cam');
+const elPhotoLib = $('in-photo-lib');
+const elPhotoImg = $('photo-img');
+const elPhotoEmpty = $('photo-empty');
+const elPhotoArt = $('photo-art');
+const elPhotoPreview = $('btn-photo-open');
+const elPhotoCurrent = $('photo-current');
+const elBtnCam = $('btn-photo-cam');
+const elBtnLib = $('btn-photo-lib');
+const elPhotoDel = $('btn-photo-del');
+const elPhotoHelp = $('photo-help');
+const elSheet = $('photo-sheet');
+const elAnimals = $('choices-animal');
+
+const PHOTO_HELP_DEFAULT = '얼굴이 부담되면 아무 사진이나 괜찮아요';
+
+/** 화면 2의 동그라미와 옆 설명을 현재 상태에 맞춰 다시 그린다 */
+function renderPhoto() {
+  const hasPhoto = Boolean(state.photo);
+  const hasAnimal = isAnimalId(state.animal);
+
+  elPhotoImg.hidden = !hasPhoto;
+  elPhotoArt.hidden = hasPhoto || !hasAnimal;
+  elPhotoEmpty.hidden = hasPhoto || hasAnimal;
+  elPhotoDel.hidden = !hasPhoto && !hasAnimal;
+  elPhotoPreview.classList.toggle('is-set', hasPhoto || hasAnimal);
+
+  if (hasPhoto) {
+    elPhotoImg.src = state.photo;
+  } else {
+    elPhotoImg.removeAttribute('src');
+    if (hasAnimal) elPhotoArt.innerHTML = animalSvg(state.animal);
+  }
+
+  elPhotoCurrent.textContent = hasPhoto
+    ? '사진을 넣었어요'
+    : hasAnimal
+      ? animalLabel(state.animal) + '을 골랐어요'
+      : '눌러서 사진이나 동물상을 고르세요';
+
+  // 시트 안의 동물 버튼 선택 표시도 같이 맞춘다
+  [...elAnimals.children].forEach((c) =>
+    c.setAttribute(
+      'aria-pressed',
+      String(!hasPhoto && c.dataset.value === state.animal)
+    )
+  );
+}
+
+function setPhotoHelp(text, isError = false) {
+  elPhotoHelp.textContent = text;
+  elPhotoHelp.classList.toggle('is-error', isError);
+}
+
+/* --- 시트 열고 닫기 --- */
+
+function openSheet() {
+  elSheet.hidden = false;
+  setPhotoHelp(PHOTO_HELP_DEFAULT);
+  // 시트가 열린 동안 뒤쪽 화면이 스크롤되면 어지럽다
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSheet() {
+  elSheet.hidden = true;
+  document.body.style.overflow = '';
+}
+
+elPhotoPreview.addEventListener('click', openSheet);
+
+elSheet.addEventListener('click', (e) => {
+  if (e.target.closest('[data-sheet-close]')) closeSheet();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !elSheet.hidden) closeSheet();
+});
+
+/* --- 사진 --- */
+
+/** 두 입력창이 같은 처리를 쓴다 */
+async function handlePhotoPick(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  elBtnCam.disabled = true;
+  elBtnLib.disabled = true;
+  setPhotoHelp('사진을 줄이는 중...');
+
+  try {
+    state.photo = await compressPhoto(file);
+    // 사진이 곧 아바타다. 골라뒀던 동물상은 비운다.
+    state.animal = null;
+    save(KEY.photo, state.photo);
+    saveDraft();
+    renderPhoto();
+    closeSheet();
+  } catch (err) {
+    console.error(err);
+    setPhotoHelp(err.message || '사진을 넣지 못했어요', true);
+  } finally {
+    elBtnCam.disabled = false;
+    elBtnLib.disabled = false;
+    // 같은 파일을 다시 골라도 change가 뜨게 비워둔다
+    input.value = '';
+  }
+}
+
+elBtnCam.addEventListener('click', () => elPhotoCam.click());
+elBtnLib.addEventListener('click', () => elPhotoLib.click());
+
+elPhotoCam.addEventListener('change', () => handlePhotoPick(elPhotoCam));
+elPhotoLib.addEventListener('change', () => handlePhotoPick(elPhotoLib));
+
+/* --- 동물상 --- */
+
+/** 시트 안 버튼 하나를 만든다 */
+function addAnimalButton(id, label, svg) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'animal';
+  btn.dataset.value = id;
+  btn.setAttribute('aria-pressed', 'false');
+  btn.setAttribute('aria-label', label);
+  // animals.js 안의 상수만 들어가므로 innerHTML 로 넣어도 안전하다
+  btn.innerHTML = svg + `<span class="animal__label">${label}</span>`;
+  elAnimals.appendChild(btn);
+  return btn;
+}
+
+// 동물을 추가하려면 animals.js 만 고치면 된다. 여기는 손댈 필요가 없다.
+ANIMALS.forEach((a) => addAnimalButton(a.id, a.label, animalSvg(a.id)));
+
+// 마지막 칸은 "안 할래요". 고르기를 강요당하는 느낌을 없앤다.
+addAnimalButton('none', '안 할래요', animalSvg('none'));
+
+elAnimals.addEventListener('click', (e) => {
+  const btn = e.target.closest('.animal');
+  if (!btn) return;
+
+  const v = btn.dataset.value;
+  // 'none' 과 "고른 걸 다시 누르기" 는 둘 다 선택 해제로 본다
+  state.animal = v === 'none' || v === state.animal ? null : v;
+
+  // 동물상을 골랐으면 사진은 비운다. 아바타는 하나만 쓴다.
+  if (state.animal) {
+    state.photo = null;
+    try {
+      localStorage.removeItem(KEY.photo);
+    } catch {
+      /* 못 지워도 화면 상태가 우선이다 */
+    }
+  }
+
+  saveDraft();
+  renderPhoto();
+  closeSheet();
+});
+
+/* --- 빼기 --- */
+
+elPhotoDel.addEventListener('click', () => {
+  state.photo = null;
+  state.animal = null;
+  try {
+    localStorage.removeItem(KEY.photo);
+  } catch {
+    /* 못 지워도 화면 상태가 우선이다 */
+  }
+  saveDraft();
+  renderPhoto();
+});
 
 /** 단수 선택 그룹 */
 function wireSingleSelect(container, onPick) {
@@ -378,6 +579,10 @@ elSubmit.addEventListener('click', async () => {
     message: state.message,
   };
 
+  // 안 골랐으면 필드 자체를 안 넣는다. 규칙이 animal 을 문자열로만 받기
+  // 때문에 null 을 넣으면 저장이 거부된다.
+  if (isAnimalId(state.animal)) profile.animal = state.animal;
+
   // 여기서부터는 되돌릴 수 없다
   state.locked = true;
   goTo('analyzing');
@@ -394,10 +599,21 @@ elSubmit.addEventListener('click', async () => {
     }
 
     const myId = await saveParticipant(profile);
+
+    // 사진 저장과 매칭 조회는 서로 기다릴 필요가 없다. 같이 돌린다.
+    const photoSaving = state.photo
+      ? savePhoto(myId, state.photo)
+      : Promise.resolve(false);
+
     const partner = await findMatch(profile, myId);
 
-    if (partner) await recordMatch(profile, partner);
+    if (partner) {
+      await recordMatch(profile, partner);
+      // 상대 사진은 여기서 딱 한 장만 받아온다
+      partner.photo = await getPhoto(partner.id);
+    }
 
+    await photoSaving;
     await minWait;
     finish(profile, partner);
   } catch (err) {
@@ -433,6 +649,37 @@ function finish(profile, partner) {
   showOutcome(profile, partner);
 }
 
+/**
+ * 상대 아바타를 그린다.
+ * 사진 > 동물상 > 기본 얼굴 순으로 채운다. animalSvg 가 모르는 값이면
+ * 알아서 기본 얼굴을 주므로, 아바타가 비는 경우는 생기지 않는다.
+ * @param {object} partner
+ */
+function renderPartnerAvatar(partner) {
+  const img = $('partner-photo');
+  const art = $('partner-art');
+  const tag = $('partner-tag');
+  const hasPhoto =
+    typeof partner.photo === 'string' && partner.photo.startsWith('data:image/');
+
+  img.hidden = !hasPhoto;
+  art.hidden = hasPhoto;
+
+  if (hasPhoto) {
+    img.src = partner.photo;
+    tag.hidden = true;
+    return;
+  }
+
+  img.removeAttribute('src');
+  art.innerHTML = animalSvg(partner.animal);
+
+  // 동물상을 안 고른 사람은 배지를 띄우지 않는다
+  const label = animalLabel(partner.animal);
+  tag.textContent = label;
+  tag.hidden = !label;
+}
+
 function showOutcome(profile, partner) {
   state.locked = true;
 
@@ -443,6 +690,7 @@ function showOutcome(profile, partner) {
         ? `궁합 ${partner.compatibility}%`
         : '궁합 --%';
     $('partner-name').textContent = partner.nickname;
+    renderPartnerAvatar(partner);
     $('partner-handle').textContent = '@' + partner.instagram;
     $('partner-message').textContent =
       partner.message && partner.message.trim()
@@ -524,6 +772,8 @@ function restart() {
     localStorage.removeItem(KEY.questions);
     localStorage.removeItem(KEY.draft);
     localStorage.removeItem(KEY.outcome);
+    // 사진을 안 지우면 다음 사람 화면에 앞사람 얼굴이 그대로 남는다
+    localStorage.removeItem(KEY.photo);
   } catch {
     /* 저장소를 못 건드려도 아래 새로고침으로 화면은 초기화된다 */
   }
@@ -548,10 +798,15 @@ function saveDraft() {
     preferredGrades: state.preferredGrades,
     answers: state.answers,
     message: state.message,
+    animal: state.animal,
   });
 }
 
 function restoreDraft() {
+  // 사진은 draft와 별도 키라 따로 되살린다
+  state.photo = load(KEY.photo);
+  renderPhoto();
+
   const d = load(KEY.draft);
   if (!d) return;
 
@@ -563,7 +818,9 @@ function restoreDraft() {
     preferredGrades: Array.isArray(d.preferredGrades) ? d.preferredGrades : [],
     answers: d.answers || {},
     message: d.message || '',
+    animal: isAnimalId(d.animal) ? d.animal : null,
   });
+  renderPhoto();
 
   elNickname.value = state.nickname;
   elInstagram.value = state.instagram;

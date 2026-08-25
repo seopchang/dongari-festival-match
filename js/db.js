@@ -35,6 +35,8 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
+  getDoc,
   getDocs,
   deleteDoc,
   writeBatch,
@@ -52,9 +54,57 @@ const db = getFirestore(app);
 
 const participantsRef = collection(db, CONFIG.COLLECTIONS.participants);
 const matchesRef = collection(db, CONFIG.COLLECTIONS.matches);
+const photosRef = collection(db, CONFIG.COLLECTIONS.photos);
 
 /** Firestore를 그대로 쓰고 싶은 화면(관리자 등)을 위해 열어둔다. */
-export { db, participantsRef, matchesRef };
+export { db, participantsRef, matchesRef, photosRef };
+
+/* ---------------------------------------------------------------------
+ * 사진
+ * ---------------------------------------------------------------------
+ * photos/{참가자문서id} = { data: 'data:image/jpeg;base64,...', createdAt }
+ *
+ * 문서 id를 참가자 id와 똑같이 맞춰 뒀다. 그래야 상대를 찾은 뒤 조회를
+ * 한 번만 하면 된다 (쿼리 없이 문서 직접 읽기).
+ * ------------------------------------------------------------------- */
+
+/**
+ * 참가자 사진을 저장한다.
+ * 사진은 없어도 그만인 정보라 실패해도 예외를 던지지 않는다. 사진 하나
+ * 빠지는 것보다 참가자가 결과를 못 보는 쪽이 나쁘다.
+ * @param {string} participantId
+ * @param {string} dataUrl compressPhoto() 결과
+ * @returns {Promise<boolean>} 저장 성공 여부
+ */
+export async function savePhoto(participantId, dataUrl) {
+  try {
+    await setDoc(doc(db, CONFIG.COLLECTIONS.photos, participantId), {
+      data: dataUrl,
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (err) {
+    console.error('[db] 사진 저장 실패 — 화면은 그대로 진행한다:', err);
+    return false;
+  }
+}
+
+/**
+ * 참가자 사진을 가져온다. 없거나 실패하면 null.
+ * @param {string} participantId
+ * @returns {Promise<string|null>} data URL
+ */
+export async function getPhoto(participantId) {
+  try {
+    const snap = await getDoc(doc(db, CONFIG.COLLECTIONS.photos, participantId));
+    if (!snap.exists()) return null;
+    const data = snap.data().data;
+    return typeof data === 'string' && data.startsWith('data:image/') ? data : null;
+  } catch (err) {
+    console.error('[db] 사진 조회 실패:', err);
+    return null;
+  }
+}
 
 /**
  * 인스타 ID를 저장 형태로 정규화한다.
@@ -96,18 +146,19 @@ export async function saveParticipant(profile) {
 }
 
 /**
- * 두 사람의 궁합을 퍼센트로 매긴다.
+ * 두 사람을 견줘 본다.
  *
- * 100%에서 어긋난 만큼 깎는 방식이다. 자세한 배점은 config.js 의 SCORE
- * 주석을 보면 된다. 순수 함수라 화면·DB와 무관하게 계산만 한다.
+ * 두 값을 따로 돌려주는 게 핵심이다. 쓰임새가 다르기 때문이다.
+ *   gradeFit — 후보를 고르는 1순위 기준 (화면엔 안 나온다)
+ *   mbtiSame — 2순위 기준이자, 화면에 띄우는 궁합 %의 근거
+ *
+ * 순수 함수라 화면·DB와 무관하게 계산만 한다.
  *
  * @param {object} me
  * @param {object} other
- * @returns {{percent: number, mbtiSame: number, gradeFit: number}}
+ * @returns {{mbtiSame: number, gradeFit: number, percent: number}}
  */
 export function scoreMatch(me, other) {
-  const { BASE, MBTI_PENALTY, GRADE_PENALTY } = CONFIG.SCORE;
-
   // MBTI 4글자 중 몇 글자가 같은가 (0~4)
   let mbtiSame = 0;
   for (let i = 0; i < 4; i++) {
@@ -115,6 +166,8 @@ export function scoreMatch(me, other) {
   }
 
   // 학년 희망이 몇 방향 맞는가 (0~2)
+  //   +1  상대가 내 학년을 원한다
+  //   +1  내가 상대 학년을 원한다
   let gradeFit = 0;
   if (Array.isArray(other.preferredGrades) && other.preferredGrades.includes(me.grade)) {
     gradeFit++;
@@ -123,22 +176,36 @@ export function scoreMatch(me, other) {
     gradeFit++;
   }
 
-  const percent =
-    BASE - (4 - mbtiSame) * MBTI_PENALTY - (2 - gradeFit) * GRADE_PENALTY;
-
-  return { percent, mbtiSame, gradeFit };
+  return {
+    mbtiSame,
+    gradeFit,
+    percent: CONFIG.MBTI_PERCENT[mbtiSame],
+  };
 }
 
 /**
  * 상대를 찾아 1명을 돌려준다.
  *
- * 이성 참가자 전원에게 점수를 매기고, **최고점자 중 랜덤 1명**을 뽑는다.
- * 점수는 줄 세우기용일 뿐 통과 기준이 아니다. 따라서 이성이 한 명이라도
- * 있으면 반드시 매칭된다 — 대기 화면은 "이성이 아예 없을 때"만 나온다.
+ * 고르는 규칙
  *
- * 예전에는 MBTI 4글자가 전부 같아야만 후보로 쳤다. 16종이라 부스에
- * 수십 명이 있어도 후보가 0명이 되기 일쑤여서, 겹치는 글자 수로 점수를
- * 매기는 방식으로 바꿨다.
+ *   1. 성별이 반대일 것                          — 절대 조건
+ *   2. 학년 희망이 **양쪽 다** 맞을 것            — 절대 조건
+ *        · 상대의 희망 학년에 내 학년이 있고
+ *        · 내 희망 학년에 상대 학년이 있어야 한다
+ *   3. 위를 통과한 사람 중 MBTI가 가장 많이 겹치는 사람, 동점이면 랜덤 1명
+ *
+ * 학년을 "점수"가 아니라 "절대 조건"으로 둔 이유
+ * ───────────────────────────────────────────────────────────────────
+ * 참가자가 직접 고른 조건이라 어기면 불만이 나온다. "3학년만 볼래요"라고
+ * 했는데 1학년이 뜨면 매칭이 성사돼도 만족스럽지 않다. 조건을 못 맞출
+ * 바에는 대기 화면을 보여주는 편이 낫다는 판단이다.
+ *
+ * 대신 **매칭 실패가 늘어난다.** 특히 행사 초반이나, 희망 학년을 하나만
+ * 고른 사람에게 자주 난다. 부스에서 "희망 학년을 여러 개 고르면 매칭
+ * 확률이 올라간다"고 안내해야 한다.
+ *
+ * MBTI는 반대로 절대 조건이 아니다. 16종이라 완전 일치를 요구하면 후보가
+ * 0명이 되기 일쑤여서, 겹치는 글자 수로 줄만 세운다.
  *
  * 이미 매칭된 적 있는 사람도 다시 뽑힌다. 매칭 횟수 제한이 없다는 게
  * 스펙이다.
@@ -159,7 +226,7 @@ export async function findMatch(me, myId) {
   );
 
   let best = [];
-  let bestScore = -Infinity;
+  let bestMbtiSame = -1;
 
   snap.forEach((docSnap) => {
     if (docSnap.id === myId) return;
@@ -169,20 +236,24 @@ export async function findMatch(me, myId) {
     // mbti가 없거나 모양이 깨진 문서는 건너뛴다 (수기로 넣은 문서 등)
     if (typeof other.mbti !== 'string' || other.mbti.length !== 4) return;
 
-    const { percent } = scoreMatch(me, other);
+    const { gradeFit, mbtiSame } = scoreMatch(me, other);
 
-    if (percent > bestScore) {
-      bestScore = percent;
+    // 학년 희망이 양쪽 다 맞지 않으면 후보에서 빼버린다
+    if (gradeFit < 2) return;
+
+    if (mbtiSame > bestMbtiSame) {
+      bestMbtiSame = mbtiSame;
       best = [other];
-    } else if (percent === bestScore) {
+    } else if (mbtiSame === bestMbtiSame) {
       best.push(other);
     }
   });
 
+  // 조건을 통과한 사람이 없으면 대기 화면으로 보낸다
   if (best.length === 0) return null;
 
   const partner = best[Math.floor(Math.random() * best.length)];
-  return { ...partner, compatibility: bestScore };
+  return { ...partner, compatibility: CONFIG.MBTI_PERCENT[bestMbtiSame] };
 }
 
 /**
@@ -224,6 +295,20 @@ export async function listParticipants() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/**
+ * 사진 전체를 { 참가자id: dataUrl } 형태로 가져온다. 관리자 표에서 쓴다.
+ * 참가자가 많으면 무거우니 관리자 화면에서만 부른다.
+ */
+export async function listPhotos() {
+  const snap = await getDocs(photosRef);
+  const map = {};
+  snap.forEach((d) => {
+    const data = d.data().data;
+    if (typeof data === 'string' && data.startsWith('data:image/')) map[d.id] = data;
+  });
+  return map;
+}
+
 /** 매칭 기록 전체를 최신순으로 가져온다. */
 export async function listMatches() {
   const snap = await getDocs(query(matchesRef, orderBy('matchedAt', 'desc')));
@@ -241,9 +326,16 @@ export async function listMatches() {
  * 지울 수 있다. 자세한 건 firestore.rules 주석 참고.
  * ------------------------------------------------------------------- */
 
-/** 참가자 1명 삭제 */
+/** 참가자 1명 삭제. 사진도 같이 지운다. */
 export async function deleteParticipant(id) {
   await deleteDoc(doc(db, CONFIG.COLLECTIONS.participants, id));
+  // 사진이 없을 수도 있고, 지우다 실패해도 참가자는 이미 지워졌다.
+  // 여기서 예외를 던지면 화면에 "삭제 실패"가 떠서 오히려 헷갈린다.
+  try {
+    await deleteDoc(doc(db, CONFIG.COLLECTIONS.photos, id));
+  } catch (err) {
+    console.error('[db] 사진 삭제 실패 (참가자는 삭제됨):', err);
+  }
 }
 
 /** 매칭 기록 1건 삭제 */
@@ -271,7 +363,7 @@ async function deleteAllIn(ref, collectionName) {
   return ids.length;
 }
 
-/** 참가자 전체 삭제 */
+/** 참가자 전체 삭제 (사진은 deleteAllPhotos 로 따로 지운다) */
 export function deleteAllParticipants() {
   return deleteAllIn(participantsRef, CONFIG.COLLECTIONS.participants);
 }
@@ -279,4 +371,9 @@ export function deleteAllParticipants() {
 /** 매칭 기록 전체 삭제 */
 export function deleteAllMatches() {
   return deleteAllIn(matchesRef, CONFIG.COLLECTIONS.matches);
+}
+
+/** 사진 전체 삭제 */
+export function deleteAllPhotos() {
+  return deleteAllIn(photosRef, CONFIG.COLLECTIONS.photos);
 }
