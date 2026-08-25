@@ -438,6 +438,10 @@ function showOutcome(profile, partner) {
 
   if (partner) {
     $('my-mbti').textContent = profile.mbti;
+    $('match-score').textContent =
+      typeof partner.compatibility === 'number'
+        ? `궁합 ${partner.compatibility}%`
+        : '궁합 --%';
     $('partner-name').textContent = partner.nickname;
     $('partner-handle').textContent = '@' + partner.instagram;
     $('partner-message').textContent =
@@ -492,6 +496,43 @@ $('btn-copy').addEventListener('click', async () => {
     }
     ta.remove();
   }
+});
+
+/* ---------------------------------------------------------------------
+ * 다음 사람 차례 — 처음부터 다시
+ * ---------------------------------------------------------------------
+ * 부스에서는 폰 한 대를 여러 명이 돌려 쓴다. 저장해둔 진행 상태를 전부
+ * 지우고 새로고침해서 완전히 깨끗한 상태로 되돌린다.
+ *
+ * 문항 세트(KEY.questions)까지 지워야 다음 사람이 새로 뽑힌 질문을 받는다.
+ *
+ * 주의: 이건 이 폰의 화면만 초기화한다. 이미 제출된 참가자 문서는 서버에
+ * 그대로 남는다 (규칙상 참가자는 자기 응답을 지울 수 없다). 그래서 다음
+ * 사람은 반드시 **다른 인스타 ID**로 참여해야 한다 — 같은 ID면 중복
+ * 참여로 막힌다.
+ * ------------------------------------------------------------------- */
+
+function restart() {
+  const ok = confirm(
+    '처음 화면으로 돌아갈까요?\n\n' +
+      '지금 화면에 뜬 상대 정보는 다시 볼 수 없어요.\n' +
+      '다음 사람은 다른 인스타 ID로 참여해야 해요.'
+  );
+  if (!ok) return;
+
+  try {
+    localStorage.removeItem(KEY.questions);
+    localStorage.removeItem(KEY.draft);
+    localStorage.removeItem(KEY.outcome);
+  } catch {
+    /* 저장소를 못 건드려도 아래 새로고침으로 화면은 초기화된다 */
+  }
+
+  location.reload();
+}
+
+document.querySelectorAll('[data-restart]').forEach((btn) => {
+  btn.addEventListener('click', restart);
 });
 
 /* ---------------------------------------------------------------------

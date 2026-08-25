@@ -720,11 +720,31 @@ button {
   box-shadow: var(--sh-card);
 }
 
+/* "운명의 상대" 좌측 · 궁합 배지 우측 */
+.card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .card__eyebrow {
   font-size: 13px;
   font-weight: 800;
   color: var(--pink-600);
   letter-spacing: 0.04em;
+}
+
+.score {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--pink-100);
+  color: var(--pink-600);
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .partner-name {

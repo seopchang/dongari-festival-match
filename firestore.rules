@@ -21,6 +21,21 @@ rules_version = '2';
 //  막아야 한다면 매칭을 Cloud Functions로 옮기고 아래 participants의
 //  read를 false로 바꾸면 된다. Functions는 Blaze(종량제) 요금제가
 //  필요하다. 자세한 건 SETUP.md 참고.
+//
+//  ⚠️⚠️ 삭제 권한 — 이 규칙을 게시하기 전에 반드시 읽을 것
+//
+//  운영진 대시보드의 삭제 기능 때문에 delete 를 "로그인한 사용자"에게
+//  열어 뒀다. 이게 안전하려면 조건이 하나 있다:
+//
+//    Firebase 콘솔 → Authentication → Settings → 사용자 작업
+//    → "만들기(가입) 사용 설정"이 **꺼져** 있어야 한다.
+//
+//  이게 켜져 있으면 누구나 API로 계정을 만들 수 있다. apiKey 는 공개
+//  저장소의 js/config.js 에 들어 있으므로, 가입이 열려 있는 채로 이
+//  규칙을 게시하면 **아무나 가입해서 참가자 데이터를 전부 지울 수 있다.**
+//
+//  가입을 끌 수 없는 사정이 있다면, 아래 isStaff() 안의 주석을 풀어
+//  운영진 이메일 목록 방식으로 바꾸면 된다.
 // =====================================================================
 
 service cloud.firestore {
@@ -38,8 +53,12 @@ service cloud.firestore {
       // 검사를 안 걸면 아무나 임의의 문서를 잔뜩 밀어넣을 수 있다.
       allow create: if isValidParticipant(request.resource.data);
 
-      // 제출한 응답은 아무도 못 고치고 못 지운다
-      allow update, delete: if false;
+      // 제출한 응답은 아무도 못 고친다. 참가자가 자기 답을 나중에
+      // 바꿔치기하는 걸 막기 위해서다.
+      allow update: if false;
+
+      // 삭제는 운영진 대시보드용. 위쪽 ⚠️ 주의사항을 반드시 읽을 것.
+      allow delete: if isStaff();
     }
 
     // -----------------------------------------------------------------
@@ -48,10 +67,11 @@ service cloud.firestore {
     match /matches/{id} {
 
       // 운영진(로그인한 사용자)만 볼 수 있다
-      allow read: if request.auth != null;
+      allow read: if isStaff();
 
       allow create: if isValidMatch(request.resource.data);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isStaff();
     }
 
     // 위에서 명시하지 않은 경로는 전부 막는다
@@ -59,6 +79,29 @@ service cloud.firestore {
       allow read, write: if false;
     }
   }
+}
+
+// ---------------------------------------------------------------------
+// 운영진 판별
+// ---------------------------------------------------------------------
+//  현재는 "로그인했으면 운영진"이다. 콘솔에서 가입을 꺼 두었다는 전제가
+//  깔려 있다 (계정을 만들 수 있는 사람 = 콘솔에 들어갈 수 있는 사람).
+//
+//  더 단단하게 잠그고 싶으면 아래 return 문을 지우고 주석 처리된 쪽을
+//  쓰면 된다. 그러면 가입이 열려 있어도 목록에 없는 계정은 아무것도
+//  못 지운다.
+// ---------------------------------------------------------------------
+
+function isStaff() {
+  return request.auth != null;
+
+  // 이메일 목록 방식으로 바꾸려면 위 줄을 지우고 아래를 쓴다:
+  // return request.auth != null
+  //     && request.auth.token.email_verified == true
+  //     && request.auth.token.email in [
+  //          'staff1@example.com',
+  //          'staff2@example.com'
+  //        ];
 }
 
 // ---------------------------------------------------------------------
@@ -92,8 +135,11 @@ function isValidParticipant(d) {
 }
 
 function isValidMatch(d) {
-  return d.keys().hasOnly(['matchedAt', 'mbti', 'a', 'b'])
+  return d.keys().hasOnly(['matchedAt', 'mbti', 'compatibility', 'a', 'b'])
       && d.matchedAt == request.time
       && d.mbti is string && d.mbti.size() == 4
-      && d.a is map && d.b is map;
+      && d.a is map && d.b is map
+      && (!('compatibility' in d.keys())
+          || (d.compatibility is int
+              && d.compatibility >= 0 && d.compatibility <= 100));
 }

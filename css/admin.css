@@ -26,6 +26,11 @@
 
 * { box-sizing: border-box; }
 
+/* HTML의 hidden 속성은 UA 스타일시트의 display:none 인데, 아래 .login 의
+ * display:flex 가 우선순위에서 이겨버린다. 그러면 로그인한 뒤에도 로그인
+ * 폼이 계속 화면에 남는다. hidden 을 항상 이기게 못 박아 둔다. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--cream);
@@ -109,6 +114,74 @@ body {
   border: 1.5px solid var(--line-1);
   color: var(--violet-600);
 }
+
+/* 되돌릴 수 없는 삭제 버튼 — 다른 버튼과 확실히 구분되게 한다 */
+.btn--danger {
+  background: #fff;
+  border: 1.5px solid #f0a5b8;
+  color: #d81b4f;
+}
+
+.btn--danger:hover { background: #fff1f5; }
+
+.danger-zone {
+  margin-top: 32px;
+  border: 1.5px solid #f0a5b8;
+  border-radius: 18px;
+  padding: 20px;
+  background: #fff8fa;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.danger-zone__head {
+  font-size: 15px;
+  font-weight: 800;
+  color: #d81b4f;
+}
+
+.danger-zone__note {
+  font-size: 13px;
+  color: var(--mute-500);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.danger-zone__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 표 안의 행별 삭제 버튼 */
+.row-del {
+  border: 1.5px solid var(--line-1);
+  background: #fff;
+  color: #d81b4f;
+  border-radius: 9px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.row-del:hover { background: #fff1f5; border-color: #f0a5b8; }
+.row-del:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.ok {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f7a4d;
+  background: #eaf7f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.ok:empty { display: none; }
 
 .error {
   font-size: 13px;

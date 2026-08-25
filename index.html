@@ -173,7 +173,7 @@
       <div class="loader__ring loader__ring--inner" aria-hidden="true"></div>
       <div class="loader__heart" aria-hidden="true">💗</div>
     </div>
-    <h2 class="title" role="status">AI가 당신의 MBTI를<br>분석하고 있어요...</h2>
+    <h2 class="title" role="status">너의 MBTI 유형을<br>분석하고 있어요...</h2>
   </section>
 
   <!-- ================================================================
@@ -192,7 +192,10 @@
 
     <div class="screen__body" style="padding-top:24px">
       <div class="card">
-        <span class="card__eyebrow">운명의 상대</span>
+        <div class="card__top">
+          <span class="card__eyebrow">운명의 상대</span>
+          <span class="score" id="match-score">궁합 --%</span>
+        </div>
 
         <div class="partner-name" id="partner-name"></div>
 
@@ -212,9 +215,16 @@
       <div class="notice">
         <span class="notice__icon" aria-hidden="true">🐻</span>
         <span class="notice__text">
-          맞팔 인증하면 하리보 증정!<br>운영진에게 이 화면을 보여주세요
+          운영진에게 맞팔 인증 화면 보여주면<br>하리보 증정!
         </span>
       </div>
+    </div>
+
+    <div class="screen__foot">
+      <button class="btn btn--ghost" type="button" data-restart>
+        다음 사람 차례 · 처음부터 다시
+      </button>
+      <p class="caption">누르면 이 화면은 사라져요. 인스타 ID를 먼저 저장해두세요</p>
     </div>
   </section>
 
@@ -248,6 +258,12 @@
           하리보는 매칭이 성사된 뒤<br>운영진을 통해 받을 수 있어요
         </span>
       </div>
+    </div>
+
+    <div class="screen__foot">
+      <button class="btn btn--ghost" type="button" data-restart>
+        다음 사람 차례 · 처음부터 다시
+      </button>
     </div>
   </section>
 

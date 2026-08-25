@@ -18,7 +18,14 @@ import {
   onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
-import { listParticipants, listMatches } from '../js/db.js';
+import {
+  listParticipants,
+  listMatches,
+  deleteParticipant,
+  deleteMatch,
+  deleteAllParticipants,
+  deleteAllMatches,
+} from '../js/db.js';
 
 const auth = getAuth();
 const $ = (id) => document.getElementById(id);
@@ -75,6 +82,7 @@ async function refresh() {
   btn.disabled = true;
   btn.textContent = '불러오는 중...';
   $('dash-error').textContent = '';
+  $('dash-ok').textContent = '';
 
   try {
     [participants, matches] = await Promise.all([listParticipants(), listMatches()]);
@@ -123,6 +131,63 @@ function tagCell(row, text, variant) {
   span.textContent = text ?? '';
   td.appendChild(span);
   row.appendChild(td);
+}
+
+/**
+ * 행 끝에 삭제 버튼을 붙인다.
+ * @param {HTMLElement} row
+ * @param {string} label 확인 창에 띄울 대상 이름
+ * @param {() => Promise<void>} run 실제 삭제 동작
+ */
+function deleteCell(row, label, run) {
+  const td = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'row-del';
+  btn.textContent = '삭제';
+
+  btn.addEventListener('click', async () => {
+    if (!confirm(`${label}\n\n정말 삭제할까요? 되돌릴 수 없습니다.`)) return;
+
+    btn.disabled = true;
+    btn.textContent = '삭제 중...';
+    try {
+      await run();
+      await refresh();
+      flashOk('삭제했습니다.');
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+      btn.textContent = '삭제';
+      showDeleteError(err);
+    }
+  });
+
+  td.appendChild(btn);
+  row.appendChild(td);
+}
+
+function flashOk(msg) {
+  $('dash-ok').textContent = msg;
+  setTimeout(() => {
+    if ($('dash-ok').textContent === msg) $('dash-ok').textContent = '';
+  }, 4000);
+}
+
+/** 삭제 실패는 대부분 규칙 미배포다. 그걸 콕 집어 알려준다. */
+function showDeleteError(err) {
+  const code = err.code || err.message || '';
+  const el = $('dash-error');
+
+  el.textContent = code.includes('permission-denied')
+    ? '삭제 권한이 없습니다. Firebase 콘솔 → Firestore Database → 규칙 탭에 ' +
+      'firestore.rules 내용을 붙여넣고 "게시"를 눌렀는지 확인하세요. ' +
+      '(로컬/배포 여부와는 무관합니다 — 같은 데이터베이스를 씁니다.)'
+    : '삭제에 실패했어요: ' + code;
+
+  // 오류 표시줄은 대시보드 맨 위에 있는데 삭제 버튼은 표 아래쪽에 있다.
+  // 그냥 두면 오류가 화면 밖에 떠서 "아무 반응 없이 안 지워진다"로 보인다.
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /* ---------------------------------------------------------------------
@@ -187,6 +252,9 @@ function renderParticipants() {
     );
     tagCell(tr, p.mbti, 'pink');
     cell(tr, p.message || '', 'msg-cell');
+    deleteCell(tr, `참가자 @${p.instagram || ''} (${p.nickname || ''})`, () =>
+      deleteParticipant(p.id)
+    );
     tb.appendChild(tr);
   });
 }
@@ -204,10 +272,16 @@ function renderMatches() {
     const tr = document.createElement('tr');
     cell(tr, fmtTime(m.matchedAt), 'num');
     tagCell(tr, m.mbti || m.a?.mbti || '');
+    cell(tr, typeof m.compatibility === 'number' ? `${m.compatibility}%` : '–', 'num');
     cell(tr, m.a?.nickname || '');
     cell(tr, '@' + (m.a?.instagram || ''));
     cell(tr, m.b?.nickname || '');
     cell(tr, '@' + (m.b?.instagram || ''));
+    deleteCell(
+      tr,
+      `매칭 @${m.a?.instagram || ''} ↔ @${m.b?.instagram || ''}`,
+      () => deleteMatch(m.id)
+    );
     tb.appendChild(tr);
   });
 }
@@ -272,6 +346,79 @@ document.querySelectorAll('.tab').forEach((tab) => {
 });
 
 /* ---------------------------------------------------------------------
+ * 데이터 초기화
+ * ---------------------------------------------------------------------
+ * 되돌릴 수 없으므로 확인을 두 번 받는다. 전체 초기화는 "삭제"를 직접
+ * 타이핑하게 해서, 확인 창을 습관적으로 넘겨버리는 사고를 막는다.
+ * ------------------------------------------------------------------- */
+
+/**
+ * @param {HTMLButtonElement} btn
+ * @param {string} label 진행 중 표시할 이름
+ * @param {() => Promise<string>} run 삭제 실행 → 결과 문구를 돌려준다
+ */
+async function runWipe(btn, label, run) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = label;
+  $('dash-error').textContent = '';
+  $('dash-ok').textContent = '';
+
+  try {
+    const msg = await run();
+    await refresh();
+    flashOk(msg);
+  } catch (err) {
+    console.error(err);
+    showDeleteError(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+$('btn-wipe-matches').addEventListener('click', () => {
+  if (matches.length === 0) {
+    flashOk('지울 매칭 기록이 없습니다.');
+    return;
+  }
+  if (!confirm(`매칭 기록 ${matches.length}건을 전부 삭제합니다.\n\n참가자는 그대로 남습니다. 되돌릴 수 없습니다.`)) {
+    return;
+  }
+
+  runWipe($('btn-wipe-matches'), '삭제 중...', async () => {
+    const n = await deleteAllMatches();
+    return `매칭 기록 ${n}건을 삭제했습니다.`;
+  });
+});
+
+$('btn-wipe-all').addEventListener('click', () => {
+  if (participants.length === 0 && matches.length === 0) {
+    flashOk('지울 데이터가 없습니다.');
+    return;
+  }
+
+  const typed = prompt(
+    `참가자 ${participants.length}명과 매칭 기록 ${matches.length}건을 전부 삭제합니다.\n` +
+      '되돌릴 수 없습니다. CSV 백업은 받으셨나요?\n\n' +
+      '계속하려면 아래에 삭제 라고 입력하세요.'
+  );
+  if (typed === null) return;
+  if (typed.trim() !== '삭제') {
+    $('dash-error').textContent = '입력이 달라서 취소했습니다. 아무것도 지우지 않았어요.';
+    return;
+  }
+
+  runWipe($('btn-wipe-all'), '삭제 중...', async () => {
+    // 매칭을 먼저 지운다. 참가자만 남는 것보다, 참가자 삭제가 중간에
+    // 실패했을 때 매칭 기록만 붕 떠 있는 상태가 더 헷갈린다.
+    const m = await deleteAllMatches();
+    const p = await deleteAllParticipants();
+    return `참가자 ${p}명, 매칭 기록 ${m}건을 삭제했습니다.`;
+  });
+});
+
+/* ---------------------------------------------------------------------
  * CSV 내려받기
  * ------------------------------------------------------------------- */
 
@@ -304,7 +451,9 @@ $('btn-csv').addEventListener('click', () => {
   a.href = url;
   a.download = 'participants.csv';
   a.click();
-  URL.revokeObjectURL(url);
+  // 곧바로 해제하면 브라우저가 저장을 시작하기 전에 URL이 사라져서
+  // 다운로드가 조용히 실패하는 경우가 있다. 한 틱 뒤에 해제한다.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
 function csvCell(v) {

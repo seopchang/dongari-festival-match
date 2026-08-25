@@ -45,6 +45,7 @@
   </div>
 
   <p class="error" id="dash-error" role="alert"></p>
+  <p class="ok" id="dash-ok" role="status"></p>
 
   <div class="stats">
     <div class="stat">
@@ -91,6 +92,7 @@
             <th>희망 학년</th>
             <th>MBTI</th>
             <th>한마디</th>
+            <th>삭제</th>
           </tr>
         </thead>
         <tbody id="tb-participants"></tbody>
@@ -107,10 +109,12 @@
           <tr>
             <th>매칭 시각</th>
             <th>MBTI</th>
+            <th>궁합</th>
             <th>A 닉네임</th>
             <th>A 인스타</th>
             <th>B 닉네임</th>
             <th>B 인스타</th>
+            <th>삭제</th>
           </tr>
         </thead>
         <tbody id="tb-matches"></tbody>
@@ -123,6 +127,21 @@
   <section class="panel" id="panel-dist">
     <div class="dist" id="dist"></div>
     <div class="empty" id="empty-dist" hidden>집계할 데이터가 없어요.</div>
+  </section>
+
+  <!-- =================================================================
+       데이터 초기화 — 되돌릴 수 없다
+       ================================================================= -->
+  <section class="danger-zone">
+    <span class="danger-zone__head">데이터 초기화</span>
+    <p class="danger-zone__note">
+      되돌릴 수 없습니다. 지우기 전에 <strong>CSV 내려받기</strong>로 백업해두세요.<br>
+      행사가 끝난 뒤에는 개인정보(인스타 ID)를 남겨둘 이유가 없으니 전체 초기화를 권합니다.
+    </p>
+    <div class="danger-zone__actions">
+      <button class="btn btn--sm btn--danger" id="btn-wipe-matches">매칭 기록만 초기화</button>
+      <button class="btn btn--sm btn--danger" id="btn-wipe-all">전체 초기화 (참가자 + 매칭)</button>
+    </div>
   </section>
 
 </div>
